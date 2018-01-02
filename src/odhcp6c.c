@@ -83,7 +83,7 @@ int main(_unused int argc, char* const argv[])
 	unsigned int ra_options = RA_RDNSS_DEFAULT_LIFETIME;
 	unsigned int ra_holdoff_interval = RA_MIN_ADV_INTERVAL;
 
-	while ((c = getopt(argc, argv, "S::N:V:P:FB:c:i:r:Ru:s:kt:m:Lhedp:fav")) != -1) {
+	while ((c = getopt(argc, argv, "S::N:V:P:FB:c:i:r:Ru:x:s:kt:m:Lhedp:fav")) != -1) {
 		switch (c) {
 		case 'S':
 			allow_slaac_only = (optarg) ? atoi(optarg) : -1;
@@ -180,6 +180,23 @@ int main(_unused int argc, char* const argv[])
 			optlen = htons(strlen(optarg));
 			odhcp6c_add_state(STATE_USERCLASS, &optlen, 2);
 			odhcp6c_add_state(STATE_USERCLASS, optarg, strlen(optarg));
+			break;
+
+		case 'x':
+			help = true;
+			optpos = strchr(optarg, ':');
+			if (optpos) {
+				l = script_unhexlify(buf, sizeof(buf), optpos+1);
+				opttype = strtoul(optarg, &optpos, 0);
+				if (l && opttype > 0 && opttype < 255) {
+					help = false;
+					opttype = htons(opttype);
+					odhcp6c_add_state(STATE_CUSTOMOPTS, &opttype, 2);
+					optlen = htons(l);
+					odhcp6c_add_state(STATE_CUSTOMOPTS, &optlen, 2);
+					odhcp6c_add_state(STATE_CUSTOMOPTS, buf, l);
+				}
+			}
 			break;
 
 		case 's':
@@ -447,6 +464,7 @@ static int usage(void)
 	"	-F		Force IPv6-Prefix\n"
 	"	-V <class>	Set vendor-class option (base-16 encoded)\n"
 	"	-u <user-class> Set user-class option string\n"
+	"	-x <opt>:<val>	Set option opt to val (integer + base-16 encoded)\n"
 	"	-c <clientid>	Override client-ID (base-16 encoded 16-bit type + value)\n"
 	"	-i <iface-id>	Use a custom interface identifier for RA handling\n"
 	"	-r <options>	Options to be requested (comma-separated)\n"
